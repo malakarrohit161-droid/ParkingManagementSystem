@@ -1,33 +1,25 @@
 import tkinter as tk
 
-from database.db import create_tables
+from database.db import create_tables, initialize_parking_slots
+from ui.dashboard import Dashboard
 
 
 def main():
 
-    # Initialize database
-    create_tables()
+    # -----------------------------
+    # DATABASE SETUP
+    # -----------------------------
 
-    # Create main application
+    create_tables()
+    initialize_parking_slots()
+
+    # -----------------------------
+    # APPLICATION
+    # -----------------------------
+
     root = tk.Tk()
 
-    root.title("Parking Management System")
-    root.geometry("1000x650")
-    root.minsize(800, 550)
-
-    title = tk.Label(
-        root,
-        text="Parking Management System",
-        font=("Arial", 26, "bold")
-    )
-    title.pack(pady=40)
-
-    subtitle = tk.Label(
-        root,
-        text="TQM-Based Parking Management",
-        font=("Arial", 14)
-    )
-    subtitle.pack()
+    Dashboard(root)
 
     root.mainloop()
 
