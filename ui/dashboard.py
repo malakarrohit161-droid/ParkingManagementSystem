@@ -1,5 +1,7 @@
 import tkinter as tk
 from database.db import get_connection
+from ui.add_vehicle import AddVehicleWindow
+
 
 
 class Dashboard:
@@ -227,7 +229,7 @@ class Dashboard:
     # -------------------------------------------------
 
     def add_vehicle(self):
-        print("Add Vehicle clicked")
+      AddVehicleWindow(self.root)
 
     def search_vehicle(self):
         print("Search Vehicle clicked")
