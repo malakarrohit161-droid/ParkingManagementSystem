@@ -1,7 +1,14 @@
 import tkinter as tk
 
+from database.db import create_tables
+
 
 def main():
+
+    # Initialize database
+    create_tables()
+
+    # Create main application
     root = tk.Tk()
 
     root.title("Parking Management System")
