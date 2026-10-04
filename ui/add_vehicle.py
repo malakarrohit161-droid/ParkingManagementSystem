@@ -1,5 +1,7 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
+
+from database.db import get_connection
 
 
 class AddVehicleWindow:
@@ -57,7 +59,10 @@ class AddVehicleWindow:
 
         form_frame.pack(fill="both", expand=True)
 
-        # Parking ID
+        # -----------------------------------
+        # PARKING ID
+        # -----------------------------------
+
         tk.Label(
             form_frame,
             text="Parking ID",
@@ -82,7 +87,10 @@ class AddVehicleWindow:
             padx=20
         )
 
-        # Vehicle Number
+        # -----------------------------------
+        # VEHICLE NUMBER
+        # -----------------------------------
+
         tk.Label(
             form_frame,
             text="Vehicle Number",
@@ -107,7 +115,10 @@ class AddVehicleWindow:
             padx=20
         )
 
-        # Owner Name
+        # -----------------------------------
+        # OWNER NAME
+        # -----------------------------------
+
         tk.Label(
             form_frame,
             text="Owner Name",
@@ -132,7 +143,10 @@ class AddVehicleWindow:
             padx=20
         )
 
-        # Phone Number
+        # -----------------------------------
+        # PHONE NUMBER
+        # -----------------------------------
+
         tk.Label(
             form_frame,
             text="Phone Number",
@@ -157,7 +171,10 @@ class AddVehicleWindow:
             padx=20
         )
 
-        # Vehicle Type
+        # -----------------------------------
+        # VEHICLE TYPE
+        # -----------------------------------
+
         tk.Label(
             form_frame,
             text="Vehicle Type",
@@ -184,7 +201,10 @@ class AddVehicleWindow:
             padx=20
         )
 
-        # Parking Slot
+        # -----------------------------------
+        # PARKING SLOT
+        # -----------------------------------
+
         tk.Label(
             form_frame,
             text="Parking Slot",
@@ -209,6 +229,9 @@ class AddVehicleWindow:
             pady=10,
             padx=20
         )
+
+        # Load available parking slots
+        self.load_available_slots()
 
         # -----------------------------------
         # BUTTONS
@@ -258,9 +281,163 @@ class AddVehicleWindow:
         )
 
     # -----------------------------------
-    # TEMPORARY FUNCTION
+    # LOAD AVAILABLE PARKING SLOTS
+    # -----------------------------------
+
+    def load_available_slots(self):
+
+        connection = get_connection()
+        cursor = connection.cursor()
+
+        cursor.execute("""
+            SELECT slot_number
+            FROM parking_slots
+            WHERE status = 'Available'
+            ORDER BY slot_number
+        """)
+
+        slots = cursor.fetchall()
+
+        connection.close()
+
+        # Convert:
+        # [('A01',), ('A02',)]
+        #
+        # into:
+        # ['A01', 'A02']
+
+        slot_list = [slot[0] for slot in slots]
+
+        self.slot_combo["values"] = slot_list
+
+    # -----------------------------------
+    # ADD VEHICLE
     # -----------------------------------
 
     def add_vehicle(self):
 
-        print("Add Vehicle button clicked")
+        # Get values from form
+
+        parking_id = self.parking_id_entry.get().strip()
+
+        vehicle_number = (
+            self.vehicle_number_entry
+            .get()
+            .strip()
+        )
+
+        owner_name = (
+            self.owner_name_entry
+            .get()
+            .strip()
+        )
+
+        phone = self.phone_entry.get().strip()
+
+        vehicle_type = (
+            self.vehicle_type_combo
+            .get()
+            .strip()
+        )
+
+        parking_slot = (
+            self.slot_combo
+            .get()
+            .strip()
+        )
+
+        # -----------------------------------
+        # PRE-ADD VALIDATION
+        # -----------------------------------
+
+        # Parking ID validation
+
+        if not parking_id:
+
+            messagebox.showwarning(
+                "Validation Error",
+                "Parking ID is required.",
+                parent=self.window
+            )
+
+            self.parking_id_entry.focus()
+
+            return
+
+        # Vehicle Number validation
+
+        if not vehicle_number:
+
+            messagebox.showwarning(
+                "Validation Error",
+                "Vehicle Number is required.",
+                parent=self.window
+            )
+
+            self.vehicle_number_entry.focus()
+
+            return
+
+        # Owner Name validation
+
+        if not owner_name:
+
+            messagebox.showwarning(
+                "Validation Error",
+                "Owner Name is required.",
+                parent=self.window
+            )
+
+            self.owner_name_entry.focus()
+
+            return
+
+        # Phone Number validation
+
+        if not phone:
+
+            messagebox.showwarning(
+                "Validation Error",
+                "Phone Number is required.",
+                parent=self.window
+            )
+
+            self.phone_entry.focus()
+
+            return
+
+        # Vehicle Type validation
+
+        if not vehicle_type:
+
+            messagebox.showwarning(
+                "Validation Error",
+                "Please select a Vehicle Type.",
+                parent=self.window
+            )
+
+            return
+
+        # Parking Slot validation
+
+        if not parking_slot:
+
+            messagebox.showwarning(
+                "Validation Error",
+                "Please select a Parking Slot.",
+                parent=self.window
+            )
+
+            return
+
+        # -----------------------------------
+        # VALIDATION SUCCESS
+        # -----------------------------------
+
+        messagebox.showinfo(
+            "Validation Successful",
+            "All required fields are valid.",
+            parent=self.window
+        )
+
+        print("Pre-add validation passed.")
