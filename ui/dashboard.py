@@ -5,6 +5,7 @@ from ui.add_vehicle import AddVehicleWindow
 from ui.search_vehicle import SearchVehicleWindow
 from ui.vehicle_exit import VehicleExitWindow
 from ui.parking_records import ParkingRecordsWindow
+from ui.parking_slots import ParkingSlotsWindow
 
 
 class Dashboard:
@@ -368,8 +369,8 @@ class Dashboard:
 
     def parking_slots(self):
 
-        print(
-            "Parking Slots clicked"
+        ParkingSlotsWindow(
+            self.root
         )
 
     # ===================================
