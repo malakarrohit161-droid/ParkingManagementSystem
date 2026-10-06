@@ -4,6 +4,7 @@ from database.db import get_connection
 from ui.add_vehicle import AddVehicleWindow
 from ui.search_vehicle import SearchVehicleWindow
 from ui.vehicle_exit import VehicleExitWindow
+from ui.parking_records import ParkingRecordsWindow
 
 
 class Dashboard:
@@ -357,8 +358,8 @@ class Dashboard:
 
     def parking_records(self):
 
-        print(
-            "Parking Records clicked"
+        ParkingRecordsWindow(
+            self.root
         )
 
     # ===================================
