@@ -3,6 +3,7 @@ import tkinter as tk
 from database.db import get_connection
 from ui.add_vehicle import AddVehicleWindow
 from ui.search_vehicle import SearchVehicleWindow
+from ui.vehicle_exit import VehicleExitWindow
 
 
 class Dashboard:
@@ -346,8 +347,8 @@ class Dashboard:
 
     def vehicle_exit(self):
 
-        print(
-            "Vehicle Exit clicked"
+        VehicleExitWindow(
+            self.root
         )
 
     # ===================================
