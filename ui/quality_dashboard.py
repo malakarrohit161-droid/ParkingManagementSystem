@@ -1,9 +1,13 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox, filedialog
 
 from services.quality_service import (
     get_quality_metrics,
     get_recent_quality_events
+)
+
+from services.report_service import (
+    export_quality_report
 )
 
 
@@ -235,9 +239,7 @@ class QualityDashboardWindow:
 
         tk.Label(
             status_frame,
-            text=(
-                "Target: 0 active duplicate vehicles"
-            ),
+            text="Target: 0 active duplicate vehicles",
             font=("Arial", 10),
             bg="white",
             fg="#6B7280"
@@ -272,15 +274,41 @@ class QualityDashboardWindow:
             side="left"
         )
 
-        tk.Button(
+        # ==========================================
+        # ACTION BUTTONS
+        # ==========================================
+
+        action_frame = tk.Frame(
             history_header,
+            bg="#F3F4F6"
+        )
+
+        action_frame.pack(
+            side="right"
+        )
+
+        tk.Button(
+            action_frame,
+            text="Export Report",
+            width=14,
+            font=("Arial", 9, "bold"),
+            cursor="hand2",
+            command=self.export_report
+        ).pack(
+            side="left",
+            padx=5
+        )
+
+        tk.Button(
+            action_frame,
             text="Refresh Metrics",
             width=15,
             font=("Arial", 9, "bold"),
             cursor="hand2",
             command=self.refresh_dashboard
         ).pack(
-            side="right"
+            side="left",
+            padx=5
         )
 
         # ==========================================
@@ -384,14 +412,10 @@ class QualityDashboardWindow:
             pady=(0, 10)
         )
 
-        # ==========================================
-        # LOAD DATA
-        # ==========================================
-
         self.refresh_dashboard()
 
     # ==========================================
-    # CREATE CARD
+    # CREATE METRIC CARD
     # ==========================================
 
     def create_metric_card(
@@ -459,25 +483,19 @@ class QualityDashboardWindow:
 
         self.successful_entries_value.config(
             text=str(
-                metrics[
-                    "successful_entries"
-                ]
+                metrics["successful_entries"]
             )
         )
 
         self.duplicate_attempts_value.config(
             text=str(
-                metrics[
-                    "duplicate_attempts"
-                ]
+                metrics["duplicate_attempts"]
             )
         )
 
         self.actual_duplicates_value.config(
             text=str(
-                metrics[
-                    "actual_duplicates"
-                ]
+                metrics["actual_duplicates"]
             )
         )
 
@@ -489,25 +507,19 @@ class QualityDashboardWindow:
 
         self.validation_failures_value.config(
             text=str(
-                metrics[
-                    "validation_failures"
-                ]
+                metrics["validation_failures"]
             )
         )
 
         self.slot_conflicts_value.config(
             text=str(
-                metrics[
-                    "slot_conflicts"
-                ]
+                metrics["slot_conflicts"]
             )
         )
 
         self.vehicle_exits_value.config(
             text=str(
-                metrics[
-                    "vehicle_exits"
-                ]
+                metrics["vehicle_exits"]
             )
         )
 
@@ -557,4 +569,54 @@ class QualityDashboardWindow:
                     event[1],
                     event[2]
                 )
+            )
+
+    # ==========================================
+    # EXPORT QUALITY REPORT
+    # ==========================================
+
+    def export_report(
+        self
+    ):
+
+        default_name = (
+            "TQM_Quality_Report.csv"
+        )
+
+        file_path = filedialog.asksaveasfilename(
+            parent=self.window,
+            title="Save Quality Report",
+            defaultextension=".csv",
+            initialfile=default_name,
+            filetypes=[
+                (
+                    "CSV Files",
+                    "*.csv"
+                )
+            ]
+        )
+
+        if not file_path:
+            return
+
+        success, message = (
+            export_quality_report(
+                file_path
+            )
+        )
+
+        if success:
+
+            messagebox.showinfo(
+                "Report Exported",
+                message,
+                parent=self.window
+            )
+
+        else:
+
+            messagebox.showerror(
+                "Export Failed",
+                message,
+                parent=self.window
             )
