@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import re
+import sqlite3
+from datetime import datetime
 
 from database.db import get_connection
 from services.validation import normalize_vehicle_number
@@ -10,8 +12,9 @@ class AddVehicleWindow:
 
     def __init__(self, parent):
 
-        self.window = tk.Toplevel(parent)
+        self.parent = parent
 
+        self.window = tk.Toplevel(parent)
         self.window.title("Add Vehicle")
         self.window.geometry("600x650")
         self.window.resizable(False, False)
@@ -446,6 +449,256 @@ class AddVehicleWindow:
         )
 
     # ===================================
+    # SAFE DATABASE INSERTION
+    # ===================================
+
+    def save_vehicle(
+        self,
+        parking_id,
+        vehicle_number,
+        owner_name,
+        phone,
+        vehicle_type,
+        parking_slot
+    ):
+
+        connection = None
+
+        try:
+
+            connection = get_connection()
+            cursor = connection.cursor()
+
+            # -----------------------------------
+            # START DATABASE TRANSACTION
+            # -----------------------------------
+
+            connection.execute("BEGIN")
+
+            # -----------------------------------
+            # FINAL SLOT CHECK
+            # -----------------------------------
+
+            cursor.execute("""
+                SELECT status, slot_type
+                FROM parking_slots
+                WHERE slot_number = ?
+            """, (parking_slot,))
+
+            slot = cursor.fetchone()
+
+            if slot is None:
+
+                connection.rollback()
+
+                return (
+                    False,
+                    "Selected parking slot does not exist."
+                )
+
+            slot_status = slot[0]
+            slot_type = slot[1]
+
+            if slot_status != "Available":
+
+                connection.rollback()
+
+                return (
+                    False,
+                    f"Parking slot {parking_slot} "
+                    "is no longer available."
+                )
+
+            if slot_type != vehicle_type:
+
+                connection.rollback()
+
+                return (
+                    False,
+                    f"Parking slot {parking_slot} "
+                    f"is reserved for {slot_type} vehicles."
+                )
+
+            # -----------------------------------
+            # FINAL PARKING ID CHECK
+            # -----------------------------------
+
+            cursor.execute("""
+                SELECT id
+                FROM parking_records
+                WHERE parking_id = ?
+            """, (parking_id,))
+
+            if cursor.fetchone():
+
+                connection.rollback()
+
+                return (
+                    False,
+                    f"Parking ID {parking_id} "
+                    "already exists."
+                )
+
+            # -----------------------------------
+            # FINAL DUPLICATE VEHICLE CHECK
+            # -----------------------------------
+
+            cursor.execute("""
+                SELECT id
+                FROM parking_records
+                WHERE vehicle_number = ?
+                AND status = 'Parked'
+            """, (vehicle_number,))
+
+            if cursor.fetchone():
+
+                connection.rollback()
+
+                return (
+                    False,
+                    f"Vehicle {vehicle_number} "
+                    "is already parked."
+                )
+
+            # -----------------------------------
+            # GENERATE ENTRY TIME
+            # -----------------------------------
+
+            entry_time = (
+                datetime.now().strftime(
+                    "%Y-%m-%d %H:%M:%S"
+                )
+            )
+
+            # -----------------------------------
+            # INSERT PARKING RECORD
+            # -----------------------------------
+
+            cursor.execute("""
+                INSERT INTO parking_records
+                (
+                    parking_id,
+                    vehicle_number,
+                    owner_name,
+                    phone,
+                    vehicle_type,
+                    slot_number,
+                    entry_time,
+                    exit_time,
+                    status
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            """, (
+                parking_id,
+                vehicle_number,
+                owner_name,
+                phone,
+                vehicle_type,
+                parking_slot,
+                entry_time,
+                None,
+                "Parked"
+            ))
+
+            # -----------------------------------
+            # MARK SLOT AS OCCUPIED
+            # -----------------------------------
+
+            cursor.execute("""
+                UPDATE parking_slots
+                SET status = 'Occupied'
+                WHERE slot_number = ?
+                AND status = 'Available'
+            """, (parking_slot,))
+
+            # Make sure exactly one slot changed
+            if cursor.rowcount != 1:
+
+                connection.rollback()
+
+                return (
+                    False,
+                    "Parking slot could not be reserved."
+                )
+
+            # -----------------------------------
+            # COMMIT TRANSACTION
+            # -----------------------------------
+
+            connection.commit()
+
+            return (
+                True,
+                entry_time
+            )
+
+        except sqlite3.IntegrityError as error:
+
+            if connection:
+
+                connection.rollback()
+
+            return (
+                False,
+                "Database rejected the entry "
+                "because duplicate or invalid "
+                "data was detected.\n\n"
+                f"Details: {error}"
+            )
+
+        except sqlite3.Error as error:
+
+            if connection:
+
+                connection.rollback()
+
+            return (
+                False,
+                "A database error occurred.\n\n"
+                f"Details: {error}"
+            )
+
+        finally:
+
+            if connection:
+
+                connection.close()
+
+    # ===================================
+    # CLEAR FORM
+    # ===================================
+
+    def clear_form(self):
+
+        self.parking_id_entry.delete(
+            0,
+            tk.END
+        )
+
+        self.vehicle_number_entry.delete(
+            0,
+            tk.END
+        )
+
+        self.owner_name_entry.delete(
+            0,
+            tk.END
+        )
+
+        self.phone_entry.delete(
+            0,
+            tk.END
+        )
+
+        self.vehicle_type_combo.set("")
+
+        self.slot_combo.set("")
+
+        self.slot_combo["values"] = []
+
+        self.parking_id_entry.focus()
+
+    # ===================================
     # ADD VEHICLE
     # ===================================
 
@@ -565,7 +818,9 @@ class AddVehicleWindow:
         # 2. PARKING ID NORMALIZATION
         # ===================================
 
-        parking_id = parking_id.upper()
+        parking_id = (
+            parking_id.upper()
+        )
 
         # ===================================
         # 3. PARKING ID FORMAT
@@ -740,36 +995,16 @@ class AddVehicleWindow:
 
         if existing_vehicle:
 
-            existing_parking_id = (
-                existing_vehicle[0]
-            )
-
-            existing_vehicle_number = (
-                existing_vehicle[1]
-            )
-
-            existing_owner = (
-                existing_vehicle[2]
-            )
-
-            existing_slot = (
-                existing_vehicle[3]
-            )
-
-            existing_entry_time = (
-                existing_vehicle[4]
-            )
-
             messagebox.showerror(
                 "Duplicate Vehicle Detected",
 
                 "This vehicle is already parked.\n\n"
 
-                f"Parking ID: {existing_parking_id}\n"
-                f"Vehicle Number: {existing_vehicle_number}\n"
-                f"Owner: {existing_owner}\n"
-                f"Parking Slot: {existing_slot}\n"
-                f"Entry Time: {existing_entry_time}\n\n"
+                f"Parking ID: {existing_vehicle[0]}\n"
+                f"Vehicle Number: {existing_vehicle[1]}\n"
+                f"Owner: {existing_vehicle[2]}\n"
+                f"Parking Slot: {existing_vehicle[3]}\n"
+                f"Entry Time: {existing_vehicle[4]}\n\n"
 
                 "Duplicate entry has been prevented.",
 
@@ -808,100 +1043,100 @@ class AddVehicleWindow:
             return
 
         # ===================================
-        # 11. CONFIRMATION DIALOG
+        # 11. CONFIRMATION
         # ===================================
 
-        confirmation = (
-            messagebox.askyesno(
-                "Confirm Vehicle Entry",
+        confirmation = messagebox.askyesno(
+            "Confirm Vehicle Entry",
 
-                "Please verify the parking details:\n\n"
+            "Please verify the parking details:\n\n"
 
-                f"Parking ID: {parking_id}\n"
-                f"Vehicle Number: {vehicle_number}\n"
-                f"Owner Name: {owner_name}\n"
-                f"Phone Number: {phone}\n"
-                f"Vehicle Type: {vehicle_type}\n"
-                f"Parking Slot: {parking_slot}\n\n"
+            f"Parking ID: {parking_id}\n"
+            f"Vehicle Number: {vehicle_number}\n"
+            f"Owner Name: {owner_name}\n"
+            f"Phone Number: {phone}\n"
+            f"Vehicle Type: {vehicle_type}\n"
+            f"Parking Slot: {parking_slot}\n\n"
 
-                "Are all the details correct?",
+            "Are all the details correct?",
 
-                parent=self.window
-            )
+            parent=self.window
         )
-
-        # ===================================
-        # USER SELECTED NO
-        # ===================================
 
         if not confirmation:
 
             messagebox.showinfo(
                 "Entry Cancelled",
-
-                "Vehicle entry was not submitted.\n\n"
-                "Please correct the details if required.",
-
+                "Vehicle entry was not saved.",
                 parent=self.window
             )
 
             return
 
         # ===================================
-        # USER SELECTED YES
+        # 12. SAFE DATABASE INSERTION
         # ===================================
 
-        messagebox.showinfo(
-            "Confirmation Successful",
+        success, result = self.save_vehicle(
+            parking_id,
+            vehicle_number,
+            owner_name,
+            phone,
+            vehicle_type,
+            parking_slot
+        )
 
-            "Vehicle details have been confirmed.\n\n"
-            "All TQM quality checks passed.\n\n"
-            "Database insertion will be added "
-            "in the next development step.",
+        # ===================================
+        # DATABASE INSERT FAILED
+        # ===================================
+
+        if not success:
+
+            messagebox.showerror(
+                "Entry Failed",
+                result,
+                parent=self.window
+            )
+
+            self.load_available_slots(
+                vehicle_type
+            )
+
+            return
+
+        # ===================================
+        # DATABASE INSERT SUCCESS
+        # ===================================
+
+        entry_time = result
+
+        messagebox.showinfo(
+            "Vehicle Added Successfully",
+
+            "Vehicle entry has been saved successfully.\n\n"
+
+            f"Parking ID: {parking_id}\n"
+            f"Vehicle Number: {vehicle_number}\n"
+            f"Parking Slot: {parking_slot}\n"
+            f"Entry Time: {entry_time}\n\n"
+
+            f"Slot {parking_slot} is now Occupied.",
 
             parent=self.window
         )
 
-        # ===================================
-        # DEBUG OUTPUT
-        # ===================================
-
         print("------------------------------")
-        print("VEHICLE ENTRY CONFIRMED")
+        print("VEHICLE SAVED")
+        print("------------------------------")
+        print("Parking ID:", parking_id)
+        print("Vehicle Number:", vehicle_number)
+        print("Owner:", owner_name)
+        print("Phone:", phone)
+        print("Vehicle Type:", vehicle_type)
+        print("Parking Slot:", parking_slot)
+        print("Entry Time:", entry_time)
+        print("Status: Parked")
         print("------------------------------")
 
-        print(
-            "Parking ID:",
-            parking_id
-        )
-
-        print(
-            "Vehicle Number:",
-            vehicle_number
-        )
-
-        print(
-            "Owner Name:",
-            owner_name
-        )
-
-        print(
-            "Phone:",
-            phone
-        )
-
-        print(
-            "Vehicle Type:",
-            vehicle_type
-        )
-
-        print(
-            "Parking Slot:",
-            parking_slot
-        )
-
-        print(
-            "Confirmation: YES"
-        )
-
-        print("------------------------------")
+        # Clear form after successful insertion
+        self.clear_form()
