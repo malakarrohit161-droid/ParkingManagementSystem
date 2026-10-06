@@ -2,37 +2,38 @@ import tkinter as tk
 from tkinter import ttk
 
 from services.quality_service import (
-    get_quality_counts,
-    get_total_quality_events,
-    get_recent_quality_events,
-    VEHICLE_ADDED,
-    VEHICLE_EXITED,
-    DUPLICATE_ATTEMPT,
-    VALIDATION_FAILED,
-    SLOT_CONFLICT
+    get_quality_metrics,
+    get_recent_quality_events
 )
 
 
 class QualityDashboardWindow:
 
-    def __init__(self, parent):
+    def __init__(
+        self,
+        parent
+    ):
 
-        self.window = tk.Toplevel(parent)
+        self.window = tk.Toplevel(
+            parent
+        )
 
         self.window.title(
-            "Quality Dashboard"
+            "TQM Quality Dashboard"
         )
 
         self.window.geometry(
-            "1100x700"
+            "1200x760"
         )
 
         self.window.minsize(
-            950,
-            600
+            1050,
+            650
         )
 
-        self.window.transient(parent)
+        self.window.transient(
+            parent
+        )
 
         # ==========================================
         # HEADER
@@ -50,7 +51,7 @@ class QualityDashboardWindow:
 
         tk.Label(
             header,
-            text="QUALITY DASHBOARD",
+            text="TQM QUALITY DASHBOARD",
             font=("Arial", 22, "bold"),
             bg="#1F2937",
             fg="white"
@@ -60,7 +61,10 @@ class QualityDashboardWindow:
 
         tk.Label(
             header,
-            text="TQM Performance Monitoring & Quality Control",
+            text=(
+                "Quality Performance Monitoring "
+                "and Continuous Improvement"
+            ),
             font=("Arial", 11),
             bg="#1F2937",
             fg="white"
@@ -86,12 +90,12 @@ class QualityDashboardWindow:
 
         tk.Label(
             self.main_frame,
-            text="Quality Performance Metrics",
+            text="Quality Performance Indicators",
             font=("Arial", 18, "bold"),
             bg="#F3F4F6",
             fg="#111827"
         ).pack(
-            pady=(20, 10)
+            pady=(15, 8)
         )
 
         # ==========================================
@@ -117,23 +121,33 @@ class QualityDashboardWindow:
             )
         )
 
-        self.vehicle_exits_value = (
-            self.create_metric_card(
-                cards_frame,
-                "VEHICLE EXITS",
-                0,
-                0,
-                1
-            )
-        )
-
         self.duplicate_attempts_value = (
             self.create_metric_card(
                 cards_frame,
                 "DUPLICATE ATTEMPTS",
                 0,
                 0,
+                1
+            )
+        )
+
+        self.actual_duplicates_value = (
+            self.create_metric_card(
+                cards_frame,
+                "ACTUAL DUPLICATES",
+                0,
+                0,
                 2
+            )
+        )
+
+        self.duplicate_rate_value = (
+            self.create_metric_card(
+                cards_frame,
+                "DUPLICATE PREVENTION",
+                "0%",
+                0,
+                3
             )
         )
 
@@ -157,18 +171,84 @@ class QualityDashboardWindow:
             )
         )
 
-        self.total_events_value = (
+        self.vehicle_exits_value = (
             self.create_metric_card(
                 cards_frame,
-                "TOTAL QUALITY EVENTS",
+                "VEHICLE EXITS",
                 0,
                 1,
                 2
             )
         )
 
+        self.success_rate_value = (
+            self.create_metric_card(
+                cards_frame,
+                "ENTRY SUCCESS RATE",
+                "0%",
+                1,
+                3
+            )
+        )
+
         # ==========================================
-        # RECENT EVENTS TITLE
+        # QUALITY STATUS
+        # ==========================================
+
+        status_frame = tk.Frame(
+            self.main_frame,
+            bg="white",
+            bd=1,
+            relief="solid"
+        )
+
+        status_frame.pack(
+            fill="x",
+            padx=40,
+            pady=(10, 8)
+        )
+
+        tk.Label(
+            status_frame,
+            text="DATA QUALITY STATUS:",
+            font=("Arial", 11, "bold"),
+            bg="white",
+            fg="#6B7280"
+        ).pack(
+            side="left",
+            padx=(20, 10),
+            pady=12
+        )
+
+        self.quality_status_value = tk.Label(
+            status_frame,
+            text="-",
+            font=("Arial", 12, "bold"),
+            bg="white",
+            fg="#111827"
+        )
+
+        self.quality_status_value.pack(
+            side="left",
+            pady=12
+        )
+
+        tk.Label(
+            status_frame,
+            text=(
+                "Target: 0 active duplicate vehicles"
+            ),
+            font=("Arial", 10),
+            bg="white",
+            fg="#6B7280"
+        ).pack(
+            side="right",
+            padx=20,
+            pady=12
+        )
+
+        # ==========================================
+        # HISTORY HEADER
         # ==========================================
 
         history_header = tk.Frame(
@@ -179,13 +259,13 @@ class QualityDashboardWindow:
         history_header.pack(
             fill="x",
             padx=40,
-            pady=(20, 5)
+            pady=(8, 5)
         )
 
         tk.Label(
             history_header,
             text="Recent Quality Events",
-            font=("Arial", 15, "bold"),
+            font=("Arial", 14, "bold"),
             bg="#F3F4F6",
             fg="#111827"
         ).pack(
@@ -194,8 +274,8 @@ class QualityDashboardWindow:
 
         tk.Button(
             history_header,
-            text="Refresh",
-            width=12,
+            text="Refresh Metrics",
+            width=15,
             font=("Arial", 9, "bold"),
             cursor="hand2",
             command=self.refresh_dashboard
@@ -204,7 +284,7 @@ class QualityDashboardWindow:
         )
 
         # ==========================================
-        # EVENT TABLE FRAME
+        # EVENT TABLE
         # ==========================================
 
         table_frame = tk.Frame(
@@ -216,12 +296,8 @@ class QualityDashboardWindow:
             fill="both",
             expand=True,
             padx=40,
-            pady=(5, 15)
+            pady=(5, 10)
         )
-
-        # ==========================================
-        # TREEVIEW
-        # ==========================================
 
         columns = (
             "event_type",
@@ -233,7 +309,7 @@ class QualityDashboardWindow:
             table_frame,
             columns=columns,
             show="headings",
-            height=8
+            height=7
         )
 
         self.event_table.heading(
@@ -253,13 +329,13 @@ class QualityDashboardWindow:
 
         self.event_table.column(
             "event_type",
-            width=170,
+            width=180,
             anchor="center"
         )
 
         self.event_table.column(
             "description",
-            width=580,
+            width=650,
             anchor="w"
         )
 
@@ -294,29 +370,28 @@ class QualityDashboardWindow:
         # FOOTER
         # ==========================================
 
-        footer = tk.Label(
+        tk.Label(
             self.main_frame,
             text=(
-                "TQM Principle: Fact-Based Decision Making | "
-                "PDCA Phase: Check"
+                "TQM | Defect Prevention | "
+                "Fact-Based Decision Making | "
+                "PDCA: Check"
             ),
-            font=("Arial", 10, "bold"),
+            font=("Arial", 9, "bold"),
             bg="#F3F4F6",
             fg="#6B7280"
-        )
-
-        footer.pack(
-            pady=(0, 12)
+        ).pack(
+            pady=(0, 10)
         )
 
         # ==========================================
-        # INITIAL DATA LOAD
+        # LOAD DATA
         # ==========================================
 
         self.refresh_dashboard()
 
     # ==========================================
-    # CREATE METRIC CARD
+    # CREATE CARD
     # ==========================================
 
     def create_metric_card(
@@ -331,8 +406,8 @@ class QualityDashboardWindow:
         card = tk.Frame(
             parent,
             bg="white",
-            width=270,
-            height=90,
+            width=250,
+            height=85,
             bd=1,
             relief="solid"
         )
@@ -340,8 +415,8 @@ class QualityDashboardWindow:
         card.grid(
             row=row,
             column=column,
-            padx=10,
-            pady=8
+            padx=7,
+            pady=7
         )
 
         card.grid_propagate(
@@ -355,13 +430,13 @@ class QualityDashboardWindow:
             bg="white",
             fg="#6B7280"
         ).pack(
-            pady=(15, 4)
+            pady=(14, 3)
         )
 
         value_label = tk.Label(
             card,
             text=str(value),
-            font=("Arial", 22, "bold"),
+            font=("Arial", 20, "bold"),
             bg="white",
             fg="#111827"
         )
@@ -374,72 +449,89 @@ class QualityDashboardWindow:
     # REFRESH DASHBOARD
     # ==========================================
 
-    def refresh_dashboard(self):
+    def refresh_dashboard(
+        self
+    ):
 
-        counts = get_quality_counts()
-
-        total_events = (
-            get_total_quality_events()
+        metrics = (
+            get_quality_metrics()
         )
 
         self.successful_entries_value.config(
             text=str(
-                counts.get(
-                    VEHICLE_ADDED,
-                    0
-                )
-            )
-        )
-
-        self.vehicle_exits_value.config(
-            text=str(
-                counts.get(
-                    VEHICLE_EXITED,
-                    0
-                )
+                metrics[
+                    "successful_entries"
+                ]
             )
         )
 
         self.duplicate_attempts_value.config(
             text=str(
-                counts.get(
-                    DUPLICATE_ATTEMPT,
-                    0
-                )
+                metrics[
+                    "duplicate_attempts"
+                ]
+            )
+        )
+
+        self.actual_duplicates_value.config(
+            text=str(
+                metrics[
+                    "actual_duplicates"
+                ]
+            )
+        )
+
+        self.duplicate_rate_value.config(
+            text=(
+                f"{metrics['duplicate_prevention_rate']}%"
             )
         )
 
         self.validation_failures_value.config(
             text=str(
-                counts.get(
-                    VALIDATION_FAILED,
-                    0
-                )
+                metrics[
+                    "validation_failures"
+                ]
             )
         )
 
         self.slot_conflicts_value.config(
             text=str(
-                counts.get(
-                    SLOT_CONFLICT,
-                    0
-                )
+                metrics[
+                    "slot_conflicts"
+                ]
             )
         )
 
-        self.total_events_value.config(
+        self.vehicle_exits_value.config(
             text=str(
-                total_events
+                metrics[
+                    "vehicle_exits"
+                ]
             )
+        )
+
+        self.success_rate_value.config(
+            text=(
+                f"{metrics['entry_success_rate']}%"
+            )
+        )
+
+        self.quality_status_value.config(
+            text=metrics[
+                "data_quality_status"
+            ]
         )
 
         self.load_recent_events()
 
     # ==========================================
-    # LOAD RECENT EVENTS
+    # RECENT EVENTS
     # ==========================================
 
-    def load_recent_events(self):
+    def load_recent_events(
+        self
+    ):
 
         for item in (
             self.event_table.get_children()

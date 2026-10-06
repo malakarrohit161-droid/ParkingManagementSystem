@@ -8,13 +8,9 @@ from database.db import get_connection
 # ==========================================
 
 VEHICLE_ADDED = "VEHICLE_ADDED"
-
 VEHICLE_EXITED = "VEHICLE_EXITED"
-
 DUPLICATE_ATTEMPT = "DUPLICATE_ATTEMPT"
-
 VALIDATION_FAILED = "VALIDATION_FAILED"
-
 SLOT_CONFLICT = "SLOT_CONFLICT"
 
 
@@ -26,19 +22,6 @@ def log_quality_event(
     event_type,
     description
 ):
-
-    """
-    Store a quality-related event
-    inside the quality_log table.
-
-    Examples:
-
-    VEHICLE_ADDED
-    VEHICLE_EXITED
-    DUPLICATE_ATTEMPT
-    VALIDATION_FAILED
-    SLOT_CONFLICT
-    """
 
     connection = None
 
@@ -60,7 +43,6 @@ def log_quality_event(
                 description,
                 event_time
             )
-
             VALUES (?, ?, ?)
         """, (
             event_type,
@@ -84,7 +66,6 @@ def log_quality_event(
     finally:
 
         if connection:
-
             connection.close()
 
 
@@ -204,9 +185,7 @@ def get_event_count(
 
     cursor.execute("""
         SELECT COUNT(*)
-
         FROM quality_log
-
         WHERE event_type = ?
     """, (
         event_type,
@@ -256,11 +235,8 @@ def get_recent_quality_events(
             event_type,
             description,
             event_time
-
         FROM quality_log
-
         ORDER BY id DESC
-
         LIMIT ?
     """, (
         limit,
@@ -286,9 +262,7 @@ def get_quality_counts():
         SELECT
             event_type,
             COUNT(*)
-
         FROM quality_log
-
         GROUP BY event_type
     """)
 
@@ -309,3 +283,195 @@ def get_quality_counts():
         counts[event_type] = count
 
     return counts
+
+
+# ==========================================
+# ACTUAL ACTIVE DUPLICATE VEHICLES
+# ==========================================
+
+def get_actual_duplicate_count():
+
+    connection = get_connection()
+    cursor = connection.cursor()
+
+    cursor.execute("""
+        SELECT COUNT(*)
+        FROM
+        (
+            SELECT vehicle_number
+            FROM parking_records
+            WHERE status = 'Parked'
+            GROUP BY vehicle_number
+            HAVING COUNT(*) > 1
+        )
+    """)
+
+    count = cursor.fetchone()[0]
+
+    connection.close()
+
+    return count
+
+
+# ==========================================
+# DUPLICATE PREVENTION RATE
+# ==========================================
+
+def get_duplicate_prevention_rate():
+
+    duplicate_attempts = (
+        get_event_count(
+            DUPLICATE_ATTEMPT
+        )
+    )
+
+    actual_duplicates = (
+        get_actual_duplicate_count()
+    )
+
+    if duplicate_attempts == 0:
+
+        if actual_duplicates == 0:
+            return 100.0
+
+        return 0.0
+
+    prevented = (
+        duplicate_attempts
+        - actual_duplicates
+    )
+
+    if prevented < 0:
+        prevented = 0
+
+    rate = (
+        prevented
+        / duplicate_attempts
+    ) * 100
+
+    return round(
+        rate,
+        2
+    )
+
+
+# ==========================================
+# ENTRY SUCCESS RATE
+# ==========================================
+
+def get_entry_success_rate():
+
+    successful_entries = (
+        get_event_count(
+            VEHICLE_ADDED
+        )
+    )
+
+    duplicate_attempts = (
+        get_event_count(
+            DUPLICATE_ATTEMPT
+        )
+    )
+
+    validation_failures = (
+        get_event_count(
+            VALIDATION_FAILED
+        )
+    )
+
+    slot_conflicts = (
+        get_event_count(
+            SLOT_CONFLICT
+        )
+    )
+
+    total_attempts = (
+        successful_entries
+        + duplicate_attempts
+        + validation_failures
+        + slot_conflicts
+    )
+
+    if total_attempts == 0:
+        return 0.0
+
+    rate = (
+        successful_entries
+        / total_attempts
+    ) * 100
+
+    return round(
+        rate,
+        2
+    )
+
+
+# ==========================================
+# DATA QUALITY STATUS
+# ==========================================
+
+def get_data_quality_status():
+
+    actual_duplicates = (
+        get_actual_duplicate_count()
+    )
+
+    if actual_duplicates == 0:
+
+        return "PASS"
+
+    return "ATTENTION REQUIRED"
+
+
+# ==========================================
+# COMPLETE QUALITY METRICS
+# ==========================================
+
+def get_quality_metrics():
+
+    counts = get_quality_counts()
+
+    return {
+
+        "successful_entries":
+            counts.get(
+                VEHICLE_ADDED,
+                0
+            ),
+
+        "vehicle_exits":
+            counts.get(
+                VEHICLE_EXITED,
+                0
+            ),
+
+        "duplicate_attempts":
+            counts.get(
+                DUPLICATE_ATTEMPT,
+                0
+            ),
+
+        "validation_failures":
+            counts.get(
+                VALIDATION_FAILED,
+                0
+            ),
+
+        "slot_conflicts":
+            counts.get(
+                SLOT_CONFLICT,
+                0
+            ),
+
+        "actual_duplicates":
+            get_actual_duplicate_count(),
+
+        "duplicate_prevention_rate":
+            get_duplicate_prevention_rate(),
+
+        "entry_success_rate":
+            get_entry_success_rate(),
+
+        "data_quality_status":
+            get_data_quality_status()
+    }
