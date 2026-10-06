@@ -28,7 +28,6 @@ class AddVehicleWindow:
             bg="#1F2937",
             height=90
         )
-
         header.pack(fill="x")
 
         title = tk.Label(
@@ -38,7 +37,6 @@ class AddVehicleWindow:
             bg="#1F2937",
             fg="white"
         )
-
         title.pack(pady=(20, 5))
 
         subtitle = tk.Label(
@@ -48,7 +46,6 @@ class AddVehicleWindow:
             bg="#1F2937",
             fg="white"
         )
-
         subtitle.pack()
 
         # ===================================
@@ -60,15 +57,14 @@ class AddVehicleWindow:
             padx=40,
             pady=25
         )
-
         form_frame.pack(
             fill="both",
             expand=True
         )
 
-        # -----------------------------------
+        # ===================================
         # PARKING ID
-        # -----------------------------------
+        # ===================================
 
         tk.Label(
             form_frame,
@@ -86,7 +82,6 @@ class AddVehicleWindow:
             width=32,
             font=("Arial", 11)
         )
-
         self.parking_id_entry.grid(
             row=0,
             column=1,
@@ -94,9 +89,9 @@ class AddVehicleWindow:
             padx=20
         )
 
-        # -----------------------------------
+        # ===================================
         # VEHICLE NUMBER
-        # -----------------------------------
+        # ===================================
 
         tk.Label(
             form_frame,
@@ -114,7 +109,6 @@ class AddVehicleWindow:
             width=32,
             font=("Arial", 11)
         )
-
         self.vehicle_number_entry.grid(
             row=1,
             column=1,
@@ -122,9 +116,9 @@ class AddVehicleWindow:
             padx=20
         )
 
-        # -----------------------------------
+        # ===================================
         # OWNER NAME
-        # -----------------------------------
+        # ===================================
 
         tk.Label(
             form_frame,
@@ -142,7 +136,6 @@ class AddVehicleWindow:
             width=32,
             font=("Arial", 11)
         )
-
         self.owner_name_entry.grid(
             row=2,
             column=1,
@@ -150,9 +143,9 @@ class AddVehicleWindow:
             padx=20
         )
 
-        # -----------------------------------
+        # ===================================
         # PHONE NUMBER
-        # -----------------------------------
+        # ===================================
 
         tk.Label(
             form_frame,
@@ -170,7 +163,6 @@ class AddVehicleWindow:
             width=32,
             font=("Arial", 11)
         )
-
         self.phone_entry.grid(
             row=3,
             column=1,
@@ -178,9 +170,9 @@ class AddVehicleWindow:
             padx=20
         )
 
-        # -----------------------------------
+        # ===================================
         # VEHICLE TYPE
-        # -----------------------------------
+        # ===================================
 
         tk.Label(
             form_frame,
@@ -200,7 +192,6 @@ class AddVehicleWindow:
             font=("Arial", 11),
             state="readonly"
         )
-
         self.vehicle_type_combo.grid(
             row=4,
             column=1,
@@ -208,9 +199,9 @@ class AddVehicleWindow:
             padx=20
         )
 
-        # -----------------------------------
+        # ===================================
         # PARKING SLOT
-        # -----------------------------------
+        # ===================================
 
         tk.Label(
             form_frame,
@@ -229,7 +220,6 @@ class AddVehicleWindow:
             font=("Arial", 11),
             state="readonly"
         )
-
         self.slot_combo.grid(
             row=5,
             column=1,
@@ -246,7 +236,6 @@ class AddVehicleWindow:
         button_frame = tk.Frame(
             form_frame
         )
-
         button_frame.grid(
             row=6,
             column=0,
@@ -265,7 +254,6 @@ class AddVehicleWindow:
             cursor="hand2",
             command=self.add_vehicle
         )
-
         add_button.grid(
             row=0,
             column=0,
@@ -281,7 +269,6 @@ class AddVehicleWindow:
             cursor="hand2",
             command=self.window.destroy
         )
-
         cancel_button.grid(
             row=0,
             column=1,
@@ -295,7 +282,6 @@ class AddVehicleWindow:
     def load_available_slots(self):
 
         connection = get_connection()
-
         cursor = connection.cursor()
 
         cursor.execute("""
@@ -317,13 +303,12 @@ class AddVehicleWindow:
         self.slot_combo["values"] = slot_list
 
     # ===================================
-    # CHECK UNIQUE PARKING ID
+    # UNIQUE PARKING ID CHECK
     # ===================================
 
     def parking_id_exists(self, parking_id):
 
         connection = get_connection()
-
         cursor = connection.cursor()
 
         cursor.execute("""
@@ -339,14 +324,41 @@ class AddVehicleWindow:
         return result is not None
 
     # ===================================
+    # SEARCH BEFORE ADD
+    # ===================================
+
+    def vehicle_already_parked(self, vehicle_number):
+
+        connection = get_connection()
+        cursor = connection.cursor()
+
+        cursor.execute("""
+            SELECT
+                parking_id,
+                vehicle_number,
+                owner_name,
+                slot_number,
+                entry_time
+            FROM parking_records
+            WHERE vehicle_number = ?
+            AND status = 'Parked'
+        """, (vehicle_number,))
+
+        result = cursor.fetchone()
+
+        connection.close()
+
+        return result
+
+    # ===================================
     # ADD VEHICLE
     # ===================================
 
     def add_vehicle(self):
 
-        # -----------------------------------
+        # ===================================
         # GET FORM VALUES
-        # -----------------------------------
+        # ===================================
 
         parking_id = (
             self.parking_id_entry
@@ -397,7 +409,6 @@ class AddVehicleWindow:
             )
 
             self.parking_id_entry.focus()
-
             return
 
         if not vehicle_number:
@@ -409,7 +420,6 @@ class AddVehicleWindow:
             )
 
             self.vehicle_number_entry.focus()
-
             return
 
         if not owner_name:
@@ -421,7 +431,6 @@ class AddVehicleWindow:
             )
 
             self.owner_name_entry.focus()
-
             return
 
         if not phone:
@@ -433,7 +442,6 @@ class AddVehicleWindow:
             )
 
             self.phone_entry.focus()
-
             return
 
         if not vehicle_type:
@@ -478,10 +486,7 @@ class AddVehicleWindow:
             )
 
             self.parking_id_entry.focus()
-
             return
-
-        # Show standardized Parking ID
 
         self.parking_id_entry.delete(
             0,
@@ -507,7 +512,6 @@ class AddVehicleWindow:
             )
 
             self.parking_id_entry.focus()
-
             return
 
         # ===================================
@@ -526,7 +530,6 @@ class AddVehicleWindow:
             )
 
             self.owner_name_entry.focus()
-
             return
 
         # ===================================
@@ -542,7 +545,6 @@ class AddVehicleWindow:
             )
 
             self.phone_entry.focus()
-
             return
 
         if len(phone) != 10:
@@ -554,7 +556,6 @@ class AddVehicleWindow:
             )
 
             self.phone_entry.focus()
-
             return
 
         if phone[0] not in "6789":
@@ -566,14 +567,13 @@ class AddVehicleWindow:
             )
 
             self.phone_entry.focus()
-
             return
 
         # ===================================
         # 7. VEHICLE NUMBER NORMALIZATION
         # ===================================
 
-        cleaned_vehicle_number = (
+        vehicle_number = (
             normalize_vehicle_number(
                 vehicle_number
             )
@@ -583,7 +583,7 @@ class AddVehicleWindow:
         # 8. VEHICLE NUMBER VALIDATION
         # ===================================
 
-        if not cleaned_vehicle_number.isalnum():
+        if not vehicle_number.isalnum():
 
             messagebox.showwarning(
                 "Invalid Vehicle Number",
@@ -592,13 +592,12 @@ class AddVehicleWindow:
             )
 
             self.vehicle_number_entry.focus()
-
             return
 
         if (
-            len(cleaned_vehicle_number) < 8
+            len(vehicle_number) < 8
             or
-            len(cleaned_vehicle_number) > 11
+            len(vehicle_number) > 11
         ):
 
             messagebox.showwarning(
@@ -608,12 +607,9 @@ class AddVehicleWindow:
             )
 
             self.vehicle_number_entry.focus()
-
             return
 
-        # -----------------------------------
-        # SHOW STANDARDIZED VEHICLE NUMBER
-        # -----------------------------------
+        # Display normalized vehicle number
 
         self.vehicle_number_entry.delete(
             0,
@@ -622,10 +618,59 @@ class AddVehicleWindow:
 
         self.vehicle_number_entry.insert(
             0,
-            cleaned_vehicle_number
+            vehicle_number
         )
 
-        vehicle_number = cleaned_vehicle_number
+        # ===================================
+        # 9. SEARCH BEFORE ADD
+        # ===================================
+
+        existing_vehicle = (
+            self.vehicle_already_parked(
+                vehicle_number
+            )
+        )
+
+        if existing_vehicle:
+
+            existing_parking_id = (
+                existing_vehicle[0]
+            )
+
+            existing_vehicle_number = (
+                existing_vehicle[1]
+            )
+
+            existing_owner = (
+                existing_vehicle[2]
+            )
+
+            existing_slot = (
+                existing_vehicle[3]
+            )
+
+            existing_entry_time = (
+                existing_vehicle[4]
+            )
+
+            messagebox.showerror(
+                "Duplicate Vehicle Detected",
+
+                "This vehicle is already parked.\n\n"
+
+                f"Parking ID: {existing_parking_id}\n"
+                f"Vehicle Number: {existing_vehicle_number}\n"
+                f"Owner: {existing_owner}\n"
+                f"Parking Slot: {existing_slot}\n"
+                f"Entry Time: {existing_entry_time}\n\n"
+
+                "Duplicate entry has been prevented.",
+
+                parent=self.window
+            )
+
+            self.vehicle_number_entry.focus()
+            return
 
         # ===================================
         # ALL QUALITY CHECKS PASSED
@@ -633,13 +678,44 @@ class AddVehicleWindow:
 
         messagebox.showinfo(
             "Validation Successful",
-            "Parking ID is unique and all entered data is valid.",
+
+            "Search Before Add completed.\n\n"
+            "No duplicate active vehicle was found.\n"
+            "All entered data is valid.",
+
             parent=self.window
         )
 
-        print("Parking ID:", parking_id)
-        print("Vehicle Number:", vehicle_number)
-        print("Owner Name:", owner_name)
-        print("Phone:", phone)
-        print("Vehicle Type:", vehicle_type)
-        print("Parking Slot:", parking_slot)
+        print(
+            "Parking ID:",
+            parking_id
+        )
+
+        print(
+            "Vehicle Number:",
+            vehicle_number
+        )
+
+        print(
+            "Owner Name:",
+            owner_name
+        )
+
+        print(
+            "Phone:",
+            phone
+        )
+
+        print(
+            "Vehicle Type:",
+            vehicle_type
+        )
+
+        print(
+            "Parking Slot:",
+            parking_slot
+        )
+
+        print(
+            "Search Before Add: PASSED"
+        )
