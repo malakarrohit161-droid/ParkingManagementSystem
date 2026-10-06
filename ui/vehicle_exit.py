@@ -9,14 +9,37 @@ from services.validation import normalize_vehicle_number
 
 class VehicleExitWindow:
 
-    def __init__(self, parent):
+    def __init__(
+        self,
+        parent,
+        on_vehicle_exited=None
+    ):
 
-        self.window = tk.Toplevel(parent)
-        self.window.title("Vehicle Exit")
-        self.window.geometry("750x650")
-        self.window.resizable(False, False)
+        self.on_vehicle_exited = (
+            on_vehicle_exited
+        )
 
-        self.window.transient(parent)
+        self.window = tk.Toplevel(
+            parent
+        )
+
+        self.window.title(
+            "Vehicle Exit"
+        )
+
+        self.window.geometry(
+            "750x650"
+        )
+
+        self.window.resizable(
+            False,
+            False
+        )
+
+        self.window.transient(
+            parent
+        )
+
         self.window.grab_set()
 
         self.current_record = None
@@ -30,7 +53,10 @@ class VehicleExitWindow:
             bg="#1F2937",
             height=90
         )
-        header.pack(fill="x")
+
+        header.pack(
+            fill="x"
+        )
 
         tk.Label(
             header,
@@ -38,7 +64,9 @@ class VehicleExitWindow:
             font=("Arial", 22, "bold"),
             bg="#1F2937",
             fg="white"
-        ).pack(pady=(20, 5))
+        ).pack(
+            pady=(20, 5)
+        )
 
         tk.Label(
             header,
@@ -57,13 +85,14 @@ class VehicleExitWindow:
             padx=35,
             pady=25
         )
+
         main_frame.pack(
             fill="both",
             expand=True
         )
 
         # ===================================
-        # SEARCH BY
+        # SEARCH TYPE
         # ===================================
 
         tk.Label(
@@ -131,7 +160,7 @@ class VehicleExitWindow:
         # SEARCH BUTTON
         # ===================================
 
-        search_button = tk.Button(
+        tk.Button(
             main_frame,
             text="Search Parked Vehicle",
             width=20,
@@ -141,9 +170,7 @@ class VehicleExitWindow:
             font=("Arial", 10, "bold"),
             cursor="hand2",
             command=self.search_vehicle
-        )
-
-        search_button.grid(
+        ).grid(
             row=2,
             column=0,
             columnspan=2,
@@ -151,7 +178,7 @@ class VehicleExitWindow:
         )
 
         # ===================================
-        # VEHICLE DETAILS
+        # RESULT FRAME
         # ===================================
 
         result_frame = tk.LabelFrame(
@@ -292,7 +319,7 @@ class VehicleExitWindow:
             padx=10
         )
 
-        close_button = tk.Button(
+        tk.Button(
             button_frame,
             text="Close",
             width=15,
@@ -300,9 +327,7 @@ class VehicleExitWindow:
             font=("Arial", 10, "bold"),
             cursor="hand2",
             command=self.window.destroy
-        )
-
-        close_button.grid(
+        ).grid(
             row=0,
             column=1,
             padx=10
@@ -370,7 +395,7 @@ class VehicleExitWindow:
         )
 
     # ===================================
-    # SEARCH PARKED VEHICLE
+    # SEARCH VEHICLE
     # ===================================
 
     def search_vehicle(self):
@@ -397,13 +422,7 @@ class VehicleExitWindow:
                 parent=self.window
             )
 
-            self.search_entry.focus()
-
             return
-
-        # ===================================
-        # NORMALIZATION
-        # ===================================
 
         if search_type == "Parking ID":
 
@@ -429,10 +448,6 @@ class VehicleExitWindow:
             search_value
         )
 
-        # ===================================
-        # DATABASE SEARCH
-        # ===================================
-
         connection = get_connection()
         cursor = connection.cursor()
 
@@ -449,10 +464,14 @@ class VehicleExitWindow:
                     slot_number,
                     entry_time,
                     status
+
                 FROM parking_records
+
                 WHERE parking_id = ?
                 AND status = 'Parked'
-            """, (search_value,))
+            """, (
+                search_value,
+            ))
 
         else:
 
@@ -467,44 +486,34 @@ class VehicleExitWindow:
                     slot_number,
                     entry_time,
                     status
+
                 FROM parking_records
+
                 WHERE vehicle_number = ?
                 AND status = 'Parked'
+
                 ORDER BY id DESC
+
                 LIMIT 1
-            """, (search_value,))
+            """, (
+                search_value,
+            ))
 
         record = cursor.fetchone()
 
         connection.close()
 
-        # ===================================
-        # VEHICLE NOT FOUND
-        # ===================================
-
         if record is None:
 
             messagebox.showinfo(
                 "Parked Vehicle Not Found",
-
-                "No active parked vehicle was found.\n\n"
-                "The vehicle may already have exited "
-                "or the entered information may be incorrect.",
-
+                "No active parked vehicle was found.",
                 parent=self.window
             )
 
             return
 
-        # ===================================
-        # STORE RECORD
-        # ===================================
-
         self.current_record = record
-
-        # ===================================
-        # DISPLAY RECORD
-        # ===================================
 
         self.parking_id_var.set(
             record[1]
@@ -550,51 +559,62 @@ class VehicleExitWindow:
 
         if self.current_record is None:
 
-            messagebox.showwarning(
-                "No Vehicle Selected",
-                "Please search for a parked vehicle first.",
-                parent=self.window
-            )
-
             return
 
-        record_id = self.current_record[0]
-        parking_id = self.current_record[1]
-        vehicle_number = self.current_record[2]
-        owner_name = self.current_record[3]
-        slot_number = self.current_record[6]
-        entry_time = self.current_record[7]
+        record_id = (
+            self.current_record[0]
+        )
+
+        parking_id = (
+            self.current_record[1]
+        )
+
+        vehicle_number = (
+            self.current_record[2]
+        )
+
+        owner_name = (
+            self.current_record[3]
+        )
+
+        slot_number = (
+            self.current_record[6]
+        )
+
+        entry_time = (
+            self.current_record[7]
+        )
 
         # ===================================
-        # CONFIRMATION DIALOG
+        # CONFIRMATION
         # ===================================
 
-        confirmation = messagebox.askyesno(
-            "Confirm Vehicle Exit",
+        confirmation = (
+            messagebox.askyesno(
+                "Confirm Vehicle Exit",
 
-            "Please verify the vehicle exit details:\n\n"
+                "Please verify the vehicle exit details:\n\n"
 
-            f"Parking ID: {parking_id}\n"
-            f"Vehicle Number: {vehicle_number}\n"
-            f"Owner Name: {owner_name}\n"
-            f"Parking Slot: {slot_number}\n"
-            f"Entry Time: {entry_time}\n\n"
+                f"Parking ID: {parking_id}\n"
+                f"Vehicle Number: {vehicle_number}\n"
+                f"Owner Name: {owner_name}\n"
+                f"Parking Slot: {slot_number}\n"
+                f"Entry Time: {entry_time}\n\n"
 
-            "Do you want to complete the vehicle exit?",
+                "Do you want to complete the vehicle exit?",
 
-            parent=self.window
+                parent=self.window
+            )
         )
 
         if not confirmation:
 
             return
 
-        # ===================================
-        # EXIT TIME
-        # ===================================
-
-        exit_time = datetime.now().strftime(
-            "%Y-%m-%d %H:%M:%S"
+        exit_time = (
+            datetime.now().strftime(
+                "%Y-%m-%d %H:%M:%S"
+            )
         )
 
         connection = None
@@ -609,52 +629,7 @@ class VehicleExitWindow:
             )
 
             # ===================================
-            # FINAL ACTIVE RECORD CHECK
-            # ===================================
-
-            cursor.execute("""
-                SELECT
-                    status,
-                    slot_number
-                FROM parking_records
-                WHERE id = ?
-            """, (record_id,))
-
-            current_status = (
-                cursor.fetchone()
-            )
-
-            if current_status is None:
-
-                connection.rollback()
-
-                messagebox.showerror(
-                    "Exit Failed",
-                    "Parking record no longer exists.",
-                    parent=self.window
-                )
-
-                return
-
-            if current_status[0] != "Parked":
-
-                connection.rollback()
-
-                messagebox.showerror(
-                    "Exit Failed",
-
-                    "This vehicle is no longer "
-                    "marked as Parked.",
-
-                    parent=self.window
-                )
-
-                self.clear_result()
-
-                return
-
-            # ===================================
-            # UPDATE PARKING RECORD
+            # UPDATE RECORD
             # ===================================
 
             cursor.execute("""
@@ -677,17 +652,16 @@ class VehicleExitWindow:
 
                 messagebox.showerror(
                     "Exit Failed",
-
-                    "Vehicle record could not "
-                    "be updated.",
-
+                    "Vehicle is no longer parked.",
                     parent=self.window
                 )
+
+                self.clear_result()
 
                 return
 
             # ===================================
-            # RELEASE PARKING SLOT
+            # RELEASE SLOT
             # ===================================
 
             cursor.execute("""
@@ -708,8 +682,8 @@ class VehicleExitWindow:
                 messagebox.showerror(
                     "Exit Failed",
 
-                    "Parking slot could not be released.\n\n"
-                    "No database changes were saved.",
+                    "Parking slot could not be released.\n"
+                    "No changes were saved.",
 
                     parent=self.window
                 )
@@ -717,10 +691,22 @@ class VehicleExitWindow:
                 return
 
             # ===================================
-            # SAVE BOTH CHANGES
+            # COMMIT
             # ===================================
 
             connection.commit()
+
+            # ===================================
+            # REFRESH MAIN DASHBOARD
+            # ===================================
+
+            if self.on_vehicle_exited:
+
+                self.on_vehicle_exited()
+
+            # ===================================
+            # SUCCESS
+            # ===================================
 
             messagebox.showinfo(
                 "Vehicle Exit Successful",
@@ -737,21 +723,8 @@ class VehicleExitWindow:
                 parent=self.window
             )
 
-            print("------------------------------")
-            print("VEHICLE EXIT COMPLETED")
-            print("------------------------------")
-            print("Parking ID:", parking_id)
-            print("Vehicle Number:", vehicle_number)
-            print("Parking Slot:", slot_number)
-            print("Entry Time:", entry_time)
-            print("Exit Time:", exit_time)
-            print("Status: Exited")
-            print("------------------------------")
-
-            # Clear old result
             self.clear_result()
 
-            # Clear search field
             self.search_entry.delete(
                 0,
                 tk.END

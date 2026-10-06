@@ -106,25 +106,31 @@ class Dashboard:
             self.get_parking_statistics()
         )
 
-        self.create_stat_card(
-            stats_frame,
-            "TOTAL SLOTS",
-            total,
-            0
+        self.total_value_label = (
+            self.create_stat_card(
+                stats_frame,
+                "TOTAL SLOTS",
+                total,
+                0
+            )
         )
 
-        self.create_stat_card(
-            stats_frame,
-            "AVAILABLE",
-            available,
-            1
+        self.available_value_label = (
+            self.create_stat_card(
+                stats_frame,
+                "AVAILABLE",
+                available,
+                1
+            )
         )
 
-        self.create_stat_card(
-            stats_frame,
-            "OCCUPIED",
-            occupied,
-            2
+        self.occupied_value_label = (
+            self.create_stat_card(
+                stats_frame,
+                "OCCUPIED",
+                occupied,
+                2
+            )
         )
 
         # ===================================
@@ -231,7 +237,7 @@ class Dashboard:
         )
 
     # ===================================
-    # PARKING STATISTICS
+    # GET PARKING STATISTICS
     # ===================================
 
     def get_parking_statistics(self):
@@ -323,6 +329,30 @@ class Dashboard:
 
         value_label.pack()
 
+        return value_label
+
+    # ===================================
+    # LIVE DASHBOARD REFRESH
+    # ===================================
+
+    def refresh_statistics(self):
+
+        total, available, occupied = (
+            self.get_parking_statistics()
+        )
+
+        self.total_value_label.config(
+            text=str(total)
+        )
+
+        self.available_value_label.config(
+            text=str(available)
+        )
+
+        self.occupied_value_label.config(
+            text=str(occupied)
+        )
+
     # ===================================
     # ADD VEHICLE
     # ===================================
@@ -330,7 +360,8 @@ class Dashboard:
     def add_vehicle(self):
 
         AddVehicleWindow(
-            self.root
+            self.root,
+            self.refresh_statistics
         )
 
     # ===================================
@@ -350,7 +381,8 @@ class Dashboard:
     def vehicle_exit(self):
 
         VehicleExitWindow(
-            self.root
+            self.root,
+            self.refresh_statistics
         )
 
     # ===================================
