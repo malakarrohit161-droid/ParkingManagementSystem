@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
+import re
 
 from database.db import get_connection
 
@@ -433,7 +434,117 @@ class AddVehicleWindow:
         # -----------------------------------
         # VALIDATION SUCCESS
         # -----------------------------------
+                # -----------------------------------
+        # DATA FORMAT VALIDATION
+        # -----------------------------------
 
+        # Parking ID format
+        # Valid examples: P001, P002, P100
+
+        if not re.fullmatch(r"P\d{3}", parking_id.upper()):
+
+            messagebox.showwarning(
+                "Invalid Parking ID",
+                "Parking ID must be in the format P001, P002, P003, etc.",
+                parent=self.window
+            )
+
+            self.parking_id_entry.focus()
+
+            return
+
+        # -----------------------------------
+        # OWNER NAME VALIDATION
+        # -----------------------------------
+
+        if not re.fullmatch(r"[A-Za-z ]+", owner_name):
+
+            messagebox.showwarning(
+                "Invalid Owner Name",
+                "Owner Name should contain only letters and spaces.",
+                parent=self.window
+            )
+
+            self.owner_name_entry.focus()
+
+            return
+
+        # -----------------------------------
+        # PHONE NUMBER VALIDATION
+        # -----------------------------------
+
+        if not phone.isdigit():
+
+            messagebox.showwarning(
+                "Invalid Phone Number",
+                "Phone Number should contain digits only.",
+                parent=self.window
+            )
+
+            self.phone_entry.focus()
+
+            return
+
+        if len(phone) != 10:
+
+            messagebox.showwarning(
+                "Invalid Phone Number",
+                "Phone Number must contain exactly 10 digits.",
+                parent=self.window
+            )
+
+            self.phone_entry.focus()
+
+            return
+
+        # Indian mobile numbers normally begin with 6, 7, 8 or 9
+
+        if phone[0] not in "6789":
+
+            messagebox.showwarning(
+                "Invalid Phone Number",
+                "Phone Number must start with 6, 7, 8 or 9.",
+                parent=self.window
+            )
+
+            self.phone_entry.focus()
+
+            return
+
+        # -----------------------------------
+        # VEHICLE NUMBER BASIC VALIDATION
+        # -----------------------------------
+
+        cleaned_vehicle_number = (
+            vehicle_number
+            .upper()
+            .replace(" ", "")
+            .replace("-", "")
+        )
+
+        if not cleaned_vehicle_number.isalnum():
+
+            messagebox.showwarning(
+                "Invalid Vehicle Number",
+                "Vehicle Number should contain only letters and numbers.",
+                parent=self.window
+            )
+
+            self.vehicle_number_entry.focus()
+
+            return
+
+        if len(cleaned_vehicle_number) < 8 or len(cleaned_vehicle_number) > 11:
+
+            messagebox.showwarning(
+                "Invalid Vehicle Number",
+                "Please enter a valid vehicle registration number.",
+                parent=self.window
+            )
+
+            self.vehicle_number_entry.focus()
+
+            return
         messagebox.showinfo(
             "Validation Successful",
             "All required fields are valid.",
