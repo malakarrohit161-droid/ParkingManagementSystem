@@ -199,6 +199,13 @@ class AddVehicleWindow:
             padx=20
         )
 
+        # When vehicle type changes,
+        # automatically load correct slots.
+        self.vehicle_type_combo.bind(
+            "<<ComboboxSelected>>",
+            self.on_vehicle_type_change
+        )
+
         # ===================================
         # PARKING SLOT
         # ===================================
@@ -227,7 +234,9 @@ class AddVehicleWindow:
             padx=20
         )
 
-        self.load_available_slots()
+        # Initially no slot is displayed.
+        # User must first select vehicle type.
+        self.slot_combo["values"] = []
 
         # ===================================
         # BUTTONS
@@ -276,10 +285,33 @@ class AddVehicleWindow:
         )
 
     # ===================================
+    # VEHICLE TYPE CHANGE
+    # ===================================
+
+    def on_vehicle_type_change(self, event=None):
+
+        vehicle_type = (
+            self.vehicle_type_combo
+            .get()
+            .strip()
+        )
+
+        # Clear old slot selection
+        self.slot_combo.set("")
+
+        # Load only suitable available slots
+        self.load_available_slots(
+            vehicle_type
+        )
+
+    # ===================================
     # LOAD AVAILABLE PARKING SLOTS
     # ===================================
 
-    def load_available_slots(self):
+    def load_available_slots(
+        self,
+        vehicle_type
+    ):
 
         connection = get_connection()
         cursor = connection.cursor()
@@ -288,8 +320,9 @@ class AddVehicleWindow:
             SELECT slot_number
             FROM parking_slots
             WHERE status = 'Available'
+            AND slot_type = ?
             ORDER BY slot_number
-        """)
+        """, (vehicle_type,))
 
         slots = cursor.fetchall()
 
@@ -300,13 +333,18 @@ class AddVehicleWindow:
             for slot in slots
         ]
 
-        self.slot_combo["values"] = slot_list
+        self.slot_combo["values"] = (
+            slot_list
+        )
 
     # ===================================
     # UNIQUE PARKING ID CHECK
     # ===================================
 
-    def parking_id_exists(self, parking_id):
+    def parking_id_exists(
+        self,
+        parking_id
+    ):
 
         connection = get_connection()
         cursor = connection.cursor()
@@ -327,7 +365,10 @@ class AddVehicleWindow:
     # SEARCH BEFORE ADD
     # ===================================
 
-    def vehicle_already_parked(self, vehicle_number):
+    def vehicle_already_parked(
+        self,
+        vehicle_number
+    ):
 
         connection = get_connection()
         cursor = connection.cursor()
@@ -349,6 +390,66 @@ class AddVehicleWindow:
         connection.close()
 
         return result
+
+    # ===================================
+    # CHECK PARKING SLOT
+    # ===================================
+
+    def validate_parking_slot(
+        self,
+        parking_slot,
+        vehicle_type
+    ):
+
+        connection = get_connection()
+        cursor = connection.cursor()
+
+        cursor.execute("""
+            SELECT
+                slot_number,
+                slot_type,
+                status
+            FROM parking_slots
+            WHERE slot_number = ?
+        """, (parking_slot,))
+
+        slot = cursor.fetchone()
+
+        connection.close()
+
+        # Slot does not exist
+        if slot is None:
+
+            return (
+                False,
+                "Selected parking slot does not exist."
+            )
+
+        slot_number = slot[0]
+        slot_type = slot[1]
+        slot_status = slot[2]
+
+        # Check vehicle type
+        if slot_type != vehicle_type:
+
+            return (
+                False,
+                f"Slot {slot_number} is reserved "
+                f"for {slot_type} vehicles."
+            )
+
+        # Check availability
+        if slot_status != "Available":
+
+            return (
+                False,
+                f"Slot {slot_number} is currently occupied."
+            )
+
+        return (
+            True,
+            "Parking slot is valid."
+        )
 
     # ===================================
     # ADD VEHICLE
@@ -452,6 +553,7 @@ class AddVehicleWindow:
                 parent=self.window
             )
 
+            self.vehicle_type_combo.focus()
             return
 
         if not parking_slot:
@@ -462,13 +564,16 @@ class AddVehicleWindow:
                 parent=self.window
             )
 
+            self.slot_combo.focus()
             return
 
         # ===================================
         # 2. PARKING ID NORMALIZATION
         # ===================================
 
-        parking_id = parking_id.upper()
+        parking_id = (
+            parking_id.upper()
+        )
 
         # ===================================
         # 3. PARKING ID FORMAT VALIDATION
@@ -481,7 +586,8 @@ class AddVehicleWindow:
 
             messagebox.showwarning(
                 "Invalid Parking ID",
-                "Parking ID must be in the format P001, P002, P003, etc.",
+                "Parking ID must be in the format "
+                "P001, P002, P003, etc.",
                 parent=self.window
             )
 
@@ -502,12 +608,18 @@ class AddVehicleWindow:
         # 4. UNIQUE PARKING ID CHECK
         # ===================================
 
-        if self.parking_id_exists(parking_id):
+        if self.parking_id_exists(
+            parking_id
+        ):
 
             messagebox.showerror(
                 "Duplicate Parking ID",
-                f"Parking ID {parking_id} already exists.\n\n"
-                "Please use a different Parking ID.",
+
+                f"Parking ID {parking_id} "
+                "already exists.\n\n"
+                "Please use a different "
+                "Parking ID.",
+
                 parent=self.window
             )
 
@@ -525,7 +637,10 @@ class AddVehicleWindow:
 
             messagebox.showwarning(
                 "Invalid Owner Name",
-                "Owner Name should contain only letters and spaces.",
+
+                "Owner Name should contain "
+                "only letters and spaces.",
+
                 parent=self.window
             )
 
@@ -533,14 +648,17 @@ class AddVehicleWindow:
             return
 
         # ===================================
-        # 6. PHONE NUMBER VALIDATION
+        # 6. PHONE VALIDATION
         # ===================================
 
         if not phone.isdigit():
 
             messagebox.showwarning(
                 "Invalid Phone Number",
-                "Phone Number should contain digits only.",
+
+                "Phone Number should contain "
+                "digits only.",
+
                 parent=self.window
             )
 
@@ -551,7 +669,10 @@ class AddVehicleWindow:
 
             messagebox.showwarning(
                 "Invalid Phone Number",
-                "Phone Number must contain exactly 10 digits.",
+
+                "Phone Number must contain "
+                "exactly 10 digits.",
+
                 parent=self.window
             )
 
@@ -562,7 +683,10 @@ class AddVehicleWindow:
 
             messagebox.showwarning(
                 "Invalid Phone Number",
-                "Phone Number must start with 6, 7, 8 or 9.",
+
+                "Phone Number must start with "
+                "6, 7, 8 or 9.",
+
                 parent=self.window
             )
 
@@ -587,7 +711,10 @@ class AddVehicleWindow:
 
             messagebox.showwarning(
                 "Invalid Vehicle Number",
-                "Vehicle Number should contain only letters and numbers.",
+
+                "Vehicle Number should contain "
+                "only letters and numbers.",
+
                 parent=self.window
             )
 
@@ -602,7 +729,10 @@ class AddVehicleWindow:
 
             messagebox.showwarning(
                 "Invalid Vehicle Number",
-                "Please enter a valid vehicle registration number.",
+
+                "Please enter a valid vehicle "
+                "registration number.",
+
                 parent=self.window
             )
 
@@ -658,11 +788,20 @@ class AddVehicleWindow:
 
                 "This vehicle is already parked.\n\n"
 
-                f"Parking ID: {existing_parking_id}\n"
-                f"Vehicle Number: {existing_vehicle_number}\n"
-                f"Owner: {existing_owner}\n"
-                f"Parking Slot: {existing_slot}\n"
-                f"Entry Time: {existing_entry_time}\n\n"
+                f"Parking ID: "
+                f"{existing_parking_id}\n"
+
+                f"Vehicle Number: "
+                f"{existing_vehicle_number}\n"
+
+                f"Owner: "
+                f"{existing_owner}\n"
+
+                f"Parking Slot: "
+                f"{existing_slot}\n"
+
+                f"Entry Time: "
+                f"{existing_entry_time}\n\n"
 
                 "Duplicate entry has been prevented.",
 
@@ -673,15 +812,47 @@ class AddVehicleWindow:
             return
 
         # ===================================
+        # 10. PARKING SLOT VALIDATION
+        # ===================================
+
+        slot_valid, slot_message = (
+            self.validate_parking_slot(
+                parking_slot,
+                vehicle_type
+            )
+        )
+
+        if not slot_valid:
+
+            messagebox.showerror(
+                "Parking Slot Error",
+                slot_message,
+                parent=self.window
+            )
+
+            # Refresh available slots
+            self.load_available_slots(
+                vehicle_type
+            )
+
+            self.slot_combo.set("")
+
+            self.slot_combo.focus()
+
+            return
+
+        # ===================================
         # ALL QUALITY CHECKS PASSED
         # ===================================
 
         messagebox.showinfo(
             "Validation Successful",
 
-            "Search Before Add completed.\n\n"
-            "No duplicate active vehicle was found.\n"
-            "All entered data is valid.",
+            "All quality checks passed.\n\n"
+            "Parking ID: Unique\n"
+            "Vehicle: Not already parked\n"
+            "Parking Slot: Valid and available\n"
+            "Input Data: Valid",
 
             parent=self.window
         )
@@ -717,5 +888,5 @@ class AddVehicleWindow:
         )
 
         print(
-            "Search Before Add: PASSED"
+            "Parking Slot Validation: PASSED"
         )
