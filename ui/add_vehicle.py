@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 import re
 
 from database.db import get_connection
+from services.validation import normalize_vehicle_number
 
 
 class AddVehicleWindow:
@@ -15,7 +16,7 @@ class AddVehicleWindow:
         self.window.geometry("600x650")
         self.window.resizable(False, False)
 
-        # Keep window above main dashboard
+        # Keep window above dashboard
         self.window.transient(parent)
         self.window.grab_set()
 
@@ -28,6 +29,7 @@ class AddVehicleWindow:
             bg="#1F2937",
             height=90
         )
+
         header.pack(fill="x")
 
         title = tk.Label(
@@ -37,6 +39,7 @@ class AddVehicleWindow:
             bg="#1F2937",
             fg="white"
         )
+
         title.pack(pady=(20, 5))
 
         subtitle = tk.Label(
@@ -46,6 +49,7 @@ class AddVehicleWindow:
             bg="#1F2937",
             fg="white"
         )
+
         subtitle.pack()
 
         # -----------------------------------
@@ -58,7 +62,10 @@ class AddVehicleWindow:
             pady=25
         )
 
-        form_frame.pack(fill="both", expand=True)
+        form_frame.pack(
+            fill="both",
+            expand=True
+        )
 
         # -----------------------------------
         # PARKING ID
@@ -238,7 +245,9 @@ class AddVehicleWindow:
         # BUTTONS
         # -----------------------------------
 
-        button_frame = tk.Frame(form_frame)
+        button_frame = tk.Frame(
+            form_frame
+        )
 
         button_frame.grid(
             row=6,
@@ -288,6 +297,7 @@ class AddVehicleWindow:
     def load_available_slots(self):
 
         connection = get_connection()
+
         cursor = connection.cursor()
 
         cursor.execute("""
@@ -301,13 +311,10 @@ class AddVehicleWindow:
 
         connection.close()
 
-        # Convert:
-        # [('A01',), ('A02',)]
-        #
-        # into:
-        # ['A01', 'A02']
-
-        slot_list = [slot[0] for slot in slots]
+        slot_list = [
+            slot[0]
+            for slot in slots
+        ]
 
         self.slot_combo["values"] = slot_list
 
@@ -317,9 +324,15 @@ class AddVehicleWindow:
 
     def add_vehicle(self):
 
-        # Get values from form
+        # -----------------------------------
+        # GET FORM VALUES
+        # -----------------------------------
 
-        parking_id = self.parking_id_entry.get().strip()
+        parking_id = (
+            self.parking_id_entry
+            .get()
+            .strip()
+        )
 
         vehicle_number = (
             self.vehicle_number_entry
@@ -333,7 +346,11 @@ class AddVehicleWindow:
             .strip()
         )
 
-        phone = self.phone_entry.get().strip()
+        phone = (
+            self.phone_entry
+            .get()
+            .strip()
+        )
 
         vehicle_type = (
             self.vehicle_type_combo
@@ -347,11 +364,9 @@ class AddVehicleWindow:
             .strip()
         )
 
-        # -----------------------------------
-        # PRE-ADD VALIDATION
-        # -----------------------------------
-
-        # Parking ID validation
+        # ===================================
+        # 1. PRE-ADD REQUIRED FIELD VALIDATION
+        # ===================================
 
         if not parking_id:
 
@@ -365,8 +380,6 @@ class AddVehicleWindow:
 
             return
 
-        # Vehicle Number validation
-
         if not vehicle_number:
 
             messagebox.showwarning(
@@ -378,8 +391,6 @@ class AddVehicleWindow:
             self.vehicle_number_entry.focus()
 
             return
-
-        # Owner Name validation
 
         if not owner_name:
 
@@ -393,8 +404,6 @@ class AddVehicleWindow:
 
             return
 
-        # Phone Number validation
-
         if not phone:
 
             messagebox.showwarning(
@@ -407,8 +416,6 @@ class AddVehicleWindow:
 
             return
 
-        # Vehicle Type validation
-
         if not vehicle_type:
 
             messagebox.showwarning(
@@ -418,8 +425,6 @@ class AddVehicleWindow:
             )
 
             return
-
-        # Parking Slot validation
 
         if not parking_slot:
 
@@ -431,17 +436,20 @@ class AddVehicleWindow:
 
             return
 
-        # -----------------------------------
-        # VALIDATION SUCCESS
-        # -----------------------------------
-                # -----------------------------------
-        # DATA FORMAT VALIDATION
-        # -----------------------------------
+        # ===================================
+        # 2. PARKING ID NORMALIZATION
+        # ===================================
 
-        # Parking ID format
-        # Valid examples: P001, P002, P100
+        parking_id = parking_id.upper()
 
-        if not re.fullmatch(r"P\d{3}", parking_id.upper()):
+        # ===================================
+        # 3. PARKING ID FORMAT VALIDATION
+        # ===================================
+
+        if not re.fullmatch(
+            r"P\d{3}",
+            parking_id
+        ):
 
             messagebox.showwarning(
                 "Invalid Parking ID",
@@ -453,11 +461,25 @@ class AddVehicleWindow:
 
             return
 
-        # -----------------------------------
-        # OWNER NAME VALIDATION
-        # -----------------------------------
+        # Show standardized Parking ID
+        self.parking_id_entry.delete(
+            0,
+            tk.END
+        )
 
-        if not re.fullmatch(r"[A-Za-z ]+", owner_name):
+        self.parking_id_entry.insert(
+            0,
+            parking_id
+        )
+
+        # ===================================
+        # 4. OWNER NAME VALIDATION
+        # ===================================
+
+        if not re.fullmatch(
+            r"[A-Za-z ]+",
+            owner_name
+        ):
 
             messagebox.showwarning(
                 "Invalid Owner Name",
@@ -469,9 +491,9 @@ class AddVehicleWindow:
 
             return
 
-        # -----------------------------------
-        # PHONE NUMBER VALIDATION
-        # -----------------------------------
+        # ===================================
+        # 5. PHONE NUMBER VALIDATION
+        # ===================================
 
         if not phone.isdigit():
 
@@ -497,8 +519,6 @@ class AddVehicleWindow:
 
             return
 
-        # Indian mobile numbers normally begin with 6, 7, 8 or 9
-
         if phone[0] not in "6789":
 
             messagebox.showwarning(
@@ -511,16 +531,19 @@ class AddVehicleWindow:
 
             return
 
-        # -----------------------------------
-        # VEHICLE NUMBER BASIC VALIDATION
-        # -----------------------------------
+        # ===================================
+        # 6. VEHICLE NUMBER NORMALIZATION
+        # ===================================
 
         cleaned_vehicle_number = (
-            vehicle_number
-            .upper()
-            .replace(" ", "")
-            .replace("-", "")
+            normalize_vehicle_number(
+                vehicle_number
+            )
         )
+
+        # ===================================
+        # 7. VEHICLE NUMBER VALIDATION
+        # ===================================
 
         if not cleaned_vehicle_number.isalnum():
 
@@ -534,7 +557,11 @@ class AddVehicleWindow:
 
             return
 
-        if len(cleaned_vehicle_number) < 8 or len(cleaned_vehicle_number) > 11:
+        if (
+            len(cleaned_vehicle_number) < 8
+            or
+            len(cleaned_vehicle_number) > 11
+        ):
 
             messagebox.showwarning(
                 "Invalid Vehicle Number",
@@ -545,10 +572,36 @@ class AddVehicleWindow:
             self.vehicle_number_entry.focus()
 
             return
+
+        # -----------------------------------
+        # SHOW STANDARDIZED VEHICLE NUMBER
+        # -----------------------------------
+
+        self.vehicle_number_entry.delete(
+            0,
+            tk.END
+        )
+
+        self.vehicle_number_entry.insert(
+            0,
+            cleaned_vehicle_number
+        )
+
+        vehicle_number = cleaned_vehicle_number
+
+        # ===================================
+        # VALIDATION SUCCESS
+        # ===================================
+
         messagebox.showinfo(
             "Validation Successful",
-            "All required fields are valid.",
+            "All required fields are valid and data has been standardized.",
             parent=self.window
         )
 
-        print("Pre-add validation passed.")
+        print("Parking ID:", parking_id)
+        print("Vehicle Number:", vehicle_number)
+        print("Owner Name:", owner_name)
+        print("Phone:", phone)
+        print("Vehicle Type:", vehicle_type)
+        print("Parking Slot:", parking_slot)
