@@ -1,11 +1,13 @@
 import tkinter as tk
 
 from database.db import get_connection
+
 from ui.add_vehicle import AddVehicleWindow
 from ui.search_vehicle import SearchVehicleWindow
 from ui.vehicle_exit import VehicleExitWindow
 from ui.parking_records import ParkingRecordsWindow
 from ui.parking_slots import ParkingSlotsWindow
+from ui.quality_dashboard import QualityDashboardWindow
 
 
 class Dashboard:
@@ -27,9 +29,9 @@ class Dashboard:
             600
         )
 
-        # ===================================
+        # ==========================================
         # HEADER
-        # ===================================
+        # ==========================================
 
         header = tk.Frame(
             root,
@@ -63,9 +65,9 @@ class Dashboard:
 
         subtitle.pack()
 
-        # ===================================
+        # ==========================================
         # MAIN FRAME
-        # ===================================
+        # ==========================================
 
         main_frame = tk.Frame(
             root,
@@ -89,9 +91,9 @@ class Dashboard:
             pady=25
         )
 
-        # ===================================
+        # ==========================================
         # STATISTICS
-        # ===================================
+        # ==========================================
 
         stats_frame = tk.Frame(
             main_frame,
@@ -133,9 +135,9 @@ class Dashboard:
             )
         )
 
-        # ===================================
-        # BUTTONS
-        # ===================================
+        # ==========================================
+        # DASHBOARD BUTTONS
+        # ==========================================
 
         button_frame = tk.Frame(
             main_frame,
@@ -211,23 +213,19 @@ class Dashboard:
                 column = 0
                 row += 1
 
-        # ===================================
+        # ==========================================
         # FOOTER
-        # ===================================
+        # ==========================================
 
         footer = tk.Label(
             main_frame,
-
             text=(
                 "Quality Goal: Reduce duplicate "
                 "entries and improve parking "
                 "data accuracy"
             ),
-
             font=("Arial", 10),
-
             bg="#F3F4F6",
-
             fg="#6B7280"
         )
 
@@ -236,9 +234,9 @@ class Dashboard:
             pady=15
         )
 
-    # ===================================
-    # GET PARKING STATISTICS
-    # ===================================
+    # ==========================================
+    # PARKING STATISTICS
+    # ==========================================
 
     def get_parking_statistics(self):
 
@@ -254,7 +252,9 @@ class Dashboard:
 
         cursor.execute("""
             SELECT COUNT(*)
+
             FROM parking_slots
+
             WHERE status = 'Available'
         """)
 
@@ -262,7 +262,9 @@ class Dashboard:
 
         cursor.execute("""
             SELECT COUNT(*)
+
             FROM parking_slots
+
             WHERE status = 'Occupied'
         """)
 
@@ -276,9 +278,9 @@ class Dashboard:
             occupied
         )
 
-    # ===================================
+    # ==========================================
     # CREATE STAT CARD
-    # ===================================
+    # ==========================================
 
     def create_stat_card(
         self,
@@ -331,9 +333,9 @@ class Dashboard:
 
         return value_label
 
-    # ===================================
-    # LIVE DASHBOARD REFRESH
-    # ===================================
+    # ==========================================
+    # REFRESH PARKING STATISTICS
+    # ==========================================
 
     def refresh_statistics(self):
 
@@ -353,9 +355,9 @@ class Dashboard:
             text=str(occupied)
         )
 
-    # ===================================
-    # ADD VEHICLE
-    # ===================================
+    # ==========================================
+    # OPEN WINDOWS
+    # ==========================================
 
     def add_vehicle(self):
 
@@ -364,19 +366,11 @@ class Dashboard:
             self.refresh_statistics
         )
 
-    # ===================================
-    # SEARCH VEHICLE
-    # ===================================
-
     def search_vehicle(self):
 
         SearchVehicleWindow(
             self.root
         )
-
-    # ===================================
-    # VEHICLE EXIT
-    # ===================================
 
     def vehicle_exit(self):
 
@@ -385,19 +379,11 @@ class Dashboard:
             self.refresh_statistics
         )
 
-    # ===================================
-    # PARKING RECORDS
-    # ===================================
-
     def parking_records(self):
 
         ParkingRecordsWindow(
             self.root
         )
-
-    # ===================================
-    # PARKING SLOTS
-    # ===================================
 
     def parking_slots(self):
 
@@ -405,12 +391,8 @@ class Dashboard:
             self.root
         )
 
-    # ===================================
-    # QUALITY DASHBOARD
-    # ===================================
-
     def quality_dashboard(self):
 
-        print(
-            "Quality Dashboard clicked"
+        QualityDashboardWindow(
+            self.root
         )
