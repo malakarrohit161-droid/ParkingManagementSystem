@@ -6,6 +6,12 @@ import sqlite3
 from database.db import get_connection
 from services.validation import normalize_vehicle_number
 
+from services.quality_service import (
+    log_vehicle_exited,
+    log_validation_failure,
+    log_slot_conflict
+)
+
 
 class VehicleExitWindow:
 
@@ -15,13 +21,9 @@ class VehicleExitWindow:
         on_vehicle_exited=None
     ):
 
-        self.on_vehicle_exited = (
-            on_vehicle_exited
-        )
+        self.on_vehicle_exited = on_vehicle_exited
 
-        self.window = tk.Toplevel(
-            parent
-        )
+        self.window = tk.Toplevel(parent)
 
         self.window.title(
             "Vehicle Exit"
@@ -92,7 +94,7 @@ class VehicleExitWindow:
         )
 
         # ===================================
-        # SEARCH TYPE
+        # SEARCH BY
         # ===================================
 
         tk.Label(
@@ -286,7 +288,7 @@ class VehicleExitWindow:
         )
 
         # ===================================
-        # BUTTONS
+        # BUTTON FRAME
         # ===================================
 
         button_frame = tk.Frame(
@@ -414,7 +416,16 @@ class VehicleExitWindow:
             .strip()
         )
 
+        # ===================================
+        # EMPTY SEARCH VALIDATION
+        # ===================================
+
         if not search_value:
+
+            log_validation_failure(
+                "Vehicle exit search attempted "
+                "without entering a search value."
+            )
 
             messagebox.showwarning(
                 "Search Required",
@@ -422,7 +433,13 @@ class VehicleExitWindow:
                 parent=self.window
             )
 
+            self.search_entry.focus()
+
             return
+
+        # ===================================
+        # NORMALIZE SEARCH
+        # ===================================
 
         if search_type == "Parking ID":
 
@@ -447,6 +464,10 @@ class VehicleExitWindow:
             0,
             search_value
         )
+
+        # ===================================
+        # DATABASE SEARCH
+        # ===================================
 
         connection = get_connection()
         cursor = connection.cursor()
@@ -503,15 +524,27 @@ class VehicleExitWindow:
 
         connection.close()
 
+        # ===================================
+        # NOT FOUND
+        # ===================================
+
         if record is None:
 
             messagebox.showinfo(
                 "Parked Vehicle Not Found",
-                "No active parked vehicle was found.",
+
+                "No active parked vehicle was found.\n\n"
+                "The vehicle may already have exited "
+                "or the search information may be incorrect.",
+
                 parent=self.window
             )
 
             return
+
+        # ===================================
+        # DISPLAY VEHICLE
+        # ===================================
 
         self.current_record = record
 
@@ -552,12 +585,23 @@ class VehicleExitWindow:
         )
 
     # ===================================
-    # EXIT VEHICLE
+    # VEHICLE EXIT
     # ===================================
 
     def exit_vehicle(self):
 
         if self.current_record is None:
+
+            log_validation_failure(
+                "Vehicle exit attempted "
+                "without selecting a parked vehicle."
+            )
+
+            messagebox.showwarning(
+                "No Vehicle Selected",
+                "Please search for a parked vehicle first.",
+                parent=self.window
+            )
 
             return
 
@@ -629,7 +673,74 @@ class VehicleExitWindow:
             )
 
             # ===================================
-            # UPDATE RECORD
+            # FINAL RECORD CHECK
+            # ===================================
+
+            cursor.execute("""
+                SELECT
+                    status,
+                    slot_number
+
+                FROM parking_records
+
+                WHERE id = ?
+            """, (
+                record_id,
+            ))
+
+            current_record = (
+                cursor.fetchone()
+            )
+
+            if current_record is None:
+
+                connection.rollback()
+
+                log_validation_failure(
+                    f"Vehicle exit failed because "
+                    f"parking record {parking_id} "
+                    "no longer exists."
+                )
+
+                messagebox.showerror(
+                    "Exit Failed",
+                    "Parking record no longer exists.",
+                    parent=self.window
+                )
+
+                self.clear_result()
+
+                return
+
+            # ===================================
+            # DOUBLE EXIT PREVENTION
+            # ===================================
+
+            if current_record[0] != "Parked":
+
+                connection.rollback()
+
+                log_validation_failure(
+                    f"Duplicate vehicle exit attempt "
+                    f"prevented for Parking ID "
+                    f"{parking_id}."
+                )
+
+                messagebox.showerror(
+                    "Exit Failed",
+
+                    "This vehicle is no longer "
+                    "marked as Parked.",
+
+                    parent=self.window
+                )
+
+                self.clear_result()
+
+                return
+
+            # ===================================
+            # UPDATE PARKING RECORD
             # ===================================
 
             cursor.execute("""
@@ -650,18 +761,24 @@ class VehicleExitWindow:
 
                 connection.rollback()
 
-                messagebox.showerror(
-                    "Exit Failed",
-                    "Vehicle is no longer parked.",
-                    parent=self.window
+                log_validation_failure(
+                    f"Vehicle exit update failed "
+                    f"for Parking ID {parking_id}."
                 )
 
-                self.clear_result()
+                messagebox.showerror(
+                    "Exit Failed",
+
+                    "Vehicle record could not "
+                    "be updated.",
+
+                    parent=self.window
+                )
 
                 return
 
             # ===================================
-            # RELEASE SLOT
+            # RELEASE PARKING SLOT
             # ===================================
 
             cursor.execute("""
@@ -679,11 +796,20 @@ class VehicleExitWindow:
 
                 connection.rollback()
 
+                log_slot_conflict(
+                    slot_number,
+
+                    f"Vehicle exit for Parking ID "
+                    f"{parking_id} failed because "
+                    f"slot {slot_number} could not "
+                    "be released."
+                )
+
                 messagebox.showerror(
                     "Exit Failed",
 
-                    "Parking slot could not be released.\n"
-                    "No changes were saved.",
+                    "Parking slot could not be released.\n\n"
+                    "No database changes were saved.",
 
                     parent=self.window
                 )
@@ -691,13 +817,23 @@ class VehicleExitWindow:
                 return
 
             # ===================================
-            # COMMIT
+            # COMMIT EXIT
             # ===================================
 
             connection.commit()
 
             # ===================================
-            # REFRESH MAIN DASHBOARD
+            # QUALITY LOG
+            # ===================================
+
+            log_vehicle_exited(
+                parking_id,
+                vehicle_number,
+                slot_number
+            )
+
+            # ===================================
+            # REFRESH DASHBOARD
             # ===================================
 
             if self.on_vehicle_exited:
@@ -705,7 +841,7 @@ class VehicleExitWindow:
                 self.on_vehicle_exited()
 
             # ===================================
-            # SUCCESS
+            # SUCCESS MESSAGE
             # ===================================
 
             messagebox.showinfo(
