@@ -16,13 +16,12 @@ class AddVehicleWindow:
         self.window.geometry("600x650")
         self.window.resizable(False, False)
 
-        # Keep window above dashboard
         self.window.transient(parent)
         self.window.grab_set()
 
-        # -----------------------------------
+        # ===================================
         # HEADER
-        # -----------------------------------
+        # ===================================
 
         header = tk.Frame(
             self.window,
@@ -52,9 +51,9 @@ class AddVehicleWindow:
 
         subtitle.pack()
 
-        # -----------------------------------
+        # ===================================
         # FORM
-        # -----------------------------------
+        # ===================================
 
         form_frame = tk.Frame(
             self.window,
@@ -238,12 +237,11 @@ class AddVehicleWindow:
             padx=20
         )
 
-        # Load available parking slots
         self.load_available_slots()
 
-        # -----------------------------------
+        # ===================================
         # BUTTONS
-        # -----------------------------------
+        # ===================================
 
         button_frame = tk.Frame(
             form_frame
@@ -290,9 +288,9 @@ class AddVehicleWindow:
             padx=10
         )
 
-    # -----------------------------------
+    # ===================================
     # LOAD AVAILABLE PARKING SLOTS
-    # -----------------------------------
+    # ===================================
 
     def load_available_slots(self):
 
@@ -318,9 +316,31 @@ class AddVehicleWindow:
 
         self.slot_combo["values"] = slot_list
 
-    # -----------------------------------
+    # ===================================
+    # CHECK UNIQUE PARKING ID
+    # ===================================
+
+    def parking_id_exists(self, parking_id):
+
+        connection = get_connection()
+
+        cursor = connection.cursor()
+
+        cursor.execute("""
+            SELECT id
+            FROM parking_records
+            WHERE parking_id = ?
+        """, (parking_id,))
+
+        result = cursor.fetchone()
+
+        connection.close()
+
+        return result is not None
+
+    # ===================================
     # ADD VEHICLE
-    # -----------------------------------
+    # ===================================
 
     def add_vehicle(self):
 
@@ -365,7 +385,7 @@ class AddVehicleWindow:
         )
 
         # ===================================
-        # 1. PRE-ADD REQUIRED FIELD VALIDATION
+        # 1. REQUIRED FIELD VALIDATION
         # ===================================
 
         if not parking_id:
@@ -462,6 +482,7 @@ class AddVehicleWindow:
             return
 
         # Show standardized Parking ID
+
         self.parking_id_entry.delete(
             0,
             tk.END
@@ -473,7 +494,24 @@ class AddVehicleWindow:
         )
 
         # ===================================
-        # 4. OWNER NAME VALIDATION
+        # 4. UNIQUE PARKING ID CHECK
+        # ===================================
+
+        if self.parking_id_exists(parking_id):
+
+            messagebox.showerror(
+                "Duplicate Parking ID",
+                f"Parking ID {parking_id} already exists.\n\n"
+                "Please use a different Parking ID.",
+                parent=self.window
+            )
+
+            self.parking_id_entry.focus()
+
+            return
+
+        # ===================================
+        # 5. OWNER NAME VALIDATION
         # ===================================
 
         if not re.fullmatch(
@@ -492,7 +530,7 @@ class AddVehicleWindow:
             return
 
         # ===================================
-        # 5. PHONE NUMBER VALIDATION
+        # 6. PHONE NUMBER VALIDATION
         # ===================================
 
         if not phone.isdigit():
@@ -532,7 +570,7 @@ class AddVehicleWindow:
             return
 
         # ===================================
-        # 6. VEHICLE NUMBER NORMALIZATION
+        # 7. VEHICLE NUMBER NORMALIZATION
         # ===================================
 
         cleaned_vehicle_number = (
@@ -542,7 +580,7 @@ class AddVehicleWindow:
         )
 
         # ===================================
-        # 7. VEHICLE NUMBER VALIDATION
+        # 8. VEHICLE NUMBER VALIDATION
         # ===================================
 
         if not cleaned_vehicle_number.isalnum():
@@ -590,12 +628,12 @@ class AddVehicleWindow:
         vehicle_number = cleaned_vehicle_number
 
         # ===================================
-        # VALIDATION SUCCESS
+        # ALL QUALITY CHECKS PASSED
         # ===================================
 
         messagebox.showinfo(
             "Validation Successful",
-            "All required fields are valid and data has been standardized.",
+            "Parking ID is unique and all entered data is valid.",
             parent=self.window
         )
 
